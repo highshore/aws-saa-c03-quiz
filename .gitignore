@@ -1,0 +1,24 @@
+# Logs
+logs
+*.log
+
+# Node
+node_modules
+**/node_modules
+
+# Build
+dist
+**/dist
+
+# Env
+.env
+**/.env
+.env.local
+**/.env.local
+
+# Vite
+.vite
+**/.vite
+
+# Mac
+.DS_Store
