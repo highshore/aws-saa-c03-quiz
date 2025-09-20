@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "parse": "ts-node scripts/parse-solutions.ts --input \"../../AWS SAA-03 Solution.txt\" --output ../public/questions.json"
+    "parse": "tsx scripts/parse-solutions.ts --input \"../../AWS SAA-03 Solution.txt\" --output ../public/questions.json",
+    "build:questions": "tsx scripts/build-questions.ts --pdf \"../../AWS Certified Solutions Architect Associate SAA-C03.pdf\" --solutions \"../../AWS SAA-03 Solution.txt\" --output ./public/questions.json"
   },
   "dependencies": {
     "firebase": "^12.2.1",
@@ -28,6 +29,8 @@
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "pdf-parse": "^1.1.1",
+    "tsx": "^4.19.2"
   }
 }
