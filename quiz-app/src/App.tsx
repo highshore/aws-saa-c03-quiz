@@ -124,9 +124,11 @@ function App() {
           <p
             style={{
               whiteSpace: "pre-wrap",
-              background: "#f5f5f5",
+              background: "#2b2b2b",
+              color: "#fff",
               padding: 12,
               borderRadius: 8,
+              border: "1px solid #444",
             }}
           >
             {current.answer ?? "(not available)"}
@@ -142,7 +144,18 @@ function App() {
           {current.notes && (
             <details style={{ marginTop: 8 }}>
               <summary>Notes</summary>
-              <pre style={{ whiteSpace: "pre-wrap" }}>{current.notes}</pre>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  background: "#1f1f1f",
+                  color: "#fff",
+                  padding: 12,
+                  borderRadius: 8,
+                  border: "1px solid #444",
+                }}
+              >
+                {current.notes}
+              </pre>
             </details>
           )}
         </section>
@@ -273,11 +286,11 @@ function Options({
       <div style={{ display: "grid", gap: 8 }}>
         {options.map((opt, i) => {
           const bg = isCorrect(i)
-            ? "#e8f5e9"
+            ? "#154a2a" // dark green for correct
             : isWrong(i)
-            ? "#ffebee"
-            : "#f9f9f9";
-          const border = isSelected(i) ? "2px solid #1976d2" : "1px solid #ddd";
+            ? "#5a1a1a" // dark red for wrong
+            : "#2b2b2b"; // dark neutral for default
+          const border = isSelected(i) ? "2px solid #90caf9" : "1px solid #444";
           return (
             <button
               key={i}
@@ -288,6 +301,7 @@ function Options({
                 background: bg,
                 border,
                 borderRadius: 8,
+                color: "#fff",
               }}
             >
               <strong style={{ marginRight: 8 }}>
