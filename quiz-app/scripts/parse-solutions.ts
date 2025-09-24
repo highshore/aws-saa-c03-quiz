@@ -5,6 +5,7 @@
     --output "../quiz-app/src/data/questions.json"
 */
 
+/// <reference types="node" />
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -39,7 +40,7 @@ function splitIntoItems(raw: string): QuizItem[] {
   const items: { id: number; lines: string[] }[] = [];
 
   let current: { id: number; lines: string[] } | null = null;
-  const startRe = /^(\d{1,4})\]\s*/; // up to 4-digit question numbers
+  const startRe = /^([1-9]\d{0,3})\]\s*/; // up to 4-digit non-zero question numbers
 
   for (const line of lines) {
     const m = line.match(startRe);

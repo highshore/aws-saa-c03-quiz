@@ -9,6 +9,7 @@
       --output "./public/questions.json"
 */
 
+/// <reference types="node" />
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -68,8 +69,8 @@ function splitPdfIntoQuestions(pdfText: string): QuizItem[] {
 
   // Pattern 1: "Topic 1Question #123" (with inconsistent spacing)
   const topicRe = /^\s*Topic\s+\d+\s*Question\s*#\s*(\d{1,4})\s*$/i;
-  // Pattern 2: "1." or "1)" or "1]" at start
-  const startRe = /^\s*(\d{1,4})\s*[\]\)\.]\s*(.*)$/;
+  // Pattern 2: "1." or "1)" or "1]" at start (non-zero id)
+  const startRe = /^\s*([1-9]\d{0,3})\s*[\]\)\.]\s*(.*)$/;
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -120,7 +121,8 @@ function splitPdfIntoQuestions(pdfText: string): QuizItem[] {
           // new option starts
           flush();
           lastLabel = label;
-          buf.push(l.replace(/^([A-F])[\.)]\s+/, ""));
+          // Support options up to J
+          buf.push(l.replace(/^([A-J])[\.)]\s+/, ""));
         } else {
           buf.push(l);
         }
@@ -146,7 +148,7 @@ function splitSolutions(raw: string): { id: number; lines: string[] }[] {
   const lines = raw.replace(/\r\n?/g, "\n").split("\n");
   const out: { id: number; lines: string[] }[] = [];
   let current: { id: number; lines: string[] } | null = null;
-  const startRe = /^(\d{1,4})\]\s*/;
+  const startRe = /^([1-9]\d{0,3})\]\s*/;
   for (const rawLine of lines) {
     const m = rawLine.match(startRe);
     if (m) {
@@ -168,27 +170,39 @@ function extractAnswerInfo(lines: string[]): {
   notes?: string;
   letters?: string[];
 } {
-  const ansIdx = lines.findIndex((l) => /^\s*ans\s*[-:]/i.test(l));
+  // Accept a variety of answer indicator lines
+  const indicator = /^(ans|answer|answers|correct\s+answer(?:s)?|correct\s+option(?:s)?)\s*[-:]/i;
+  const ansIdx = lines.findIndex((l) => indicator.test(l.trim()));
+
   let answer: string | undefined;
   let notes: string | undefined;
   let letters: string[] = [];
 
   if (ansIdx >= 0) {
-    const ansLine = lines[ansIdx].replace(/^\s*ans\s*[-:]/i, "").trim();
+    const ansLine = lines[ansIdx].replace(indicator, "").trim();
     answer = normalizeTextBlock(ansLine);
     notes = normalizeTextBlock(lines.slice(ansIdx + 1).join("\n")) || undefined;
   } else {
-    // fallback: take first non-empty line as answer candidate
-    const first = lines.find((l) => l.trim().length > 0);
-    if (first) answer = normalizeTextBlock(first);
-    notes = normalizeTextBlock(lines.slice(1).join("\n")) || undefined;
+    // fallback: try any inline pattern like "Correct answer: X"
+    const inlineIdx = lines.findIndex((l) => /answer\s*[:\-]/i.test(l));
+    if (inlineIdx >= 0) {
+      const m = lines[inlineIdx].split(/[:\-]/, 2)[1] ?? "";
+      answer = normalizeTextBlock(m);
+      notes = normalizeTextBlock(lines.slice(inlineIdx + 1).join("\n")) || undefined;
+    } else {
+      // final fallback: take first non-empty line as answer candidate
+      const first = lines.find((l) => l.trim().length > 0);
+      if (first) answer = normalizeTextBlock(first);
+      notes = normalizeTextBlock(lines.slice(1).join("\n")) || undefined;
+    }
   }
 
-  // extract explicit letters from any line mentioning correct answer
-  const letterRe = /\b([A-F])\b/g;
+  // Extract explicit letters from any answer-related line
+  const letterRe = /\b([A-J])\b/g;
+  const related = /correct|ans|answer/i;
   const candidates: Set<string> = new Set();
   for (const l of lines) {
-    if (/correct answer|^\s*ans\s*[-:]/i.test(l)) {
+    if (related.test(l)) {
       let m: RegExpExecArray | null;
       const s = l.toUpperCase();
       while ((m = letterRe.exec(s))) {
@@ -196,12 +210,12 @@ function extractAnswerInfo(lines: string[]): {
       }
     }
   }
-  // Also, if notes contain "A." / "B." headings and the question is multi-select, those could be the correct ones listed
+  // Also, if notes contain lines like "A. ..." collect those letters
   if (notes) {
     const startLetters = notes
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => /^[A-F][\.)]\s+/.test(l))
+      .filter((l) => /^[A-J][\.)]\s+/.test(l))
       .map((l) => l[0]);
     for (const c of startLetters) candidates.add(c);
   }
@@ -306,11 +320,18 @@ async function main() {
     if (!correct) correct = fuzzyMatchAnswerToOptions(answer, it.options);
     const type: "single" | "multi" =
       it.type ?? (correct && correct.length > 1 ? "multi" : "single");
+    // Fallback: derive human-readable answer text from correct option(s)
+    let answerText = answer;
+    if ((!answerText || answerText.length < 2) && correct && it.options && correct.length > 0) {
+      answerText = correct
+        .map((i) => `${String.fromCharCode(65 + i)}. ${it.options![i]}`)
+        .join("\n");
+    }
     return {
       id: it.id,
       question: it.question,
       options: it.options,
-      answer,
+      answer: answerText,
       notes,
       correct,
       type,

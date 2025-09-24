@@ -26,11 +26,11 @@ function App() {
     if (!items) return [] as QuizItem[];
     const term = q.trim().toLowerCase();
     if (!term) return items;
-    return items.filter(
-      (it) =>
-        it.question.toLowerCase().includes(term) ||
-        it.answer.toLowerCase().includes(term)
-    );
+    return items.filter((it) => {
+      const inQ = it.question.toLowerCase().includes(term);
+      const inA = (it.answer?.toLowerCase().includes(term) ?? false);
+      return inQ || inA;
+    });
   }, [items, q]);
 
   useEffect(() => {
@@ -55,6 +55,13 @@ function App() {
     );
 
   const current = filtered[Math.max(0, Math.min(index, filtered.length - 1))];
+  const answerText =
+    current.answer ??
+    (current.correct && current.options
+      ? current.correct
+          .map((i) => `${String.fromCharCode(65 + i)}. ${current.options![i]}`)
+          .join("\n")
+      : "(not available)");
 
   return (
     <div style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
@@ -131,7 +138,7 @@ function App() {
               border: "1px solid #444",
             }}
           >
-            {current.answer ?? "(not available)"}
+            {answerText}
           </p>
           {current.options && current.correct && (
             <p style={{ marginTop: 8 }}>
@@ -178,7 +185,7 @@ function App() {
               }}
               style={{ padding: "6px 8px" }}
             >
-              {it.id}
+              {idx + 1}
             </button>
           ))}
         </div>
